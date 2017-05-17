@@ -25,31 +25,27 @@ export default class AppContainer extends Component {
     this.prev = this.prev.bind(this);
     this.selectAlbum = this.selectAlbum.bind(this);
     this.deselectAlbum = this.deselectAlbum.bind(this);
+    this.selectArtist = this.selectArtist.bind(this);
   }
 
   componentDidMount () {
-    console.log('componentDidMount hello')
-
     let albumsPromise = axios.get('/api/albums/')
       .then(res => res.data)
+      .catch(console.error('error'));
       // .then(albums => this.onLoad(convertAlbums(albums)));
 
     let artistsPromise = axios.get('/api/artists/')
-      .then(res => {
-        console.log('res.data',res.data)
-        return res.data
-    })
+      .then(res => res.data)
+      .catch(console.error('error'));
       // .then(artistsFromServer => this.onLoad(null, artistsFromServer))
 
     Promise.all([albumsPromise, artistsPromise])
     .then(resultArray => {
-
       let returnedAlbums = resultArray[0];
       let returnedArtists = resultArray[1];
-      console.log('returnedAlbums', returnedAlbums);
-      console.log('returnedArtists', returnedArtists);
-      this.onLoad(convertAlbums(returnedAlbums), returnedArtists)
-    })
+      this.onLoad({ albums: convertAlbums(returnedAlbums), artists: returnedArtists });
+      })
+      .catch(console.error('error'));
 
     AUDIO.addEventListener('ended', () =>
       this.next());
@@ -58,12 +54,15 @@ export default class AppContainer extends Component {
 
   }
 
-  onLoad (albums, artists) {
-    this.setState({
-      albums: albums,
-      artists: artists
-    });
+  onLoad(newStateObj) {
+    this.setState(newStateObj);
   }
+  // onLoad (albums, artists) {
+  //   this.setState({
+  //     albums: albums,
+  //     artists: artists
+  //   });
+  // }
 // PREVIOUS
   // onLoad (albums) {
   //   this.setState({
@@ -128,6 +127,30 @@ export default class AppContainer extends Component {
       }));
   }
 
+  selectArtist (artistId) {
+    const gettingArtist = axios.get(`/api/artists/${artistId}`)
+      .then(res => res.data)
+      .catch(console.error('error'));
+
+    const gettingArtistAlbums = axios.get(`/api/artists/${artistId}/albums`)
+      .then(res => res.data)
+      .catch(console.error('error'));
+
+    const gettingArtistSongs = axios.get(`/api/artists/${artistId}/songs`)
+      .then(res => res.data)
+      .catch(console.error('error'));
+
+    Promise.all([gettingArtist, gettingArtistAlbums, gettingArtistSongs])
+      .then(resultArray => {
+        const returnedArtist = resultArray[0];
+        const returnedAlbums = resultArray[1];
+        const returnedSongs = resultArray[2];
+        console.log('artist:', returnedArtist, ', albums:', returnedAlbums, ', songs:', returnedSongs);
+        this.onLoad({ selectedArtist: returnedArtist, albums: returnedAlbums, songs: returnedSongs });
+      })
+      .catch(console.error('error'));
+  }
+
   deselectAlbum () {
     this.setState({ selectedAlbum: {}});
   }
@@ -144,9 +167,11 @@ export default class AppContainer extends Component {
             React.cloneElement(this.props.children, {
               album: this.state.selectedAlbum,
               albums: this.state.albums,
+              songs: this.state.songs,
               selectAlbum: this.selectAlbum,
-              artists: this.state.arists,
+              artists: this.state.artists,
               selectedArtist: this.state.selectedArtist,
+              selectArtist: this.selectArtist,
               currentSong: this.state.currentSong,
               isPlaying: this.state.isPlaying,
               toggle: this.toggleOne

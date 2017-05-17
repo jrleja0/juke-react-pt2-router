@@ -72,6 +72,10 @@
 	
 	var _Artists2 = _interopRequireDefault(_Artists);
 	
+	var _Artist = __webpack_require__(272);
+	
+	var _Artist2 = _interopRequireDefault(_Artist);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	_reactDom2.default.render(_react2.default.createElement(
@@ -83,7 +87,8 @@
 	    _react2.default.createElement(_reactRouter.IndexRedirect, { to: 'albums' }),
 	    _react2.default.createElement(_reactRouter.Route, { path: 'albums', component: _Albums2.default }),
 	    _react2.default.createElement(_reactRouter.Route, { path: 'albums/:albumId', component: _Album2.default }),
-	    _react2.default.createElement(_reactRouter.Route, { path: 'artists', component: _Artists2.default })
+	    _react2.default.createElement(_reactRouter.Route, { path: 'artists', component: _Artists2.default }),
+	    _react2.default.createElement(_reactRouter.Route, { path: 'artists/:artistId', component: _Artist2.default })
 	  )
 	), document.getElementById('app'));
 	
@@ -26949,6 +26954,7 @@
 	    _this.prev = _this.prev.bind(_this);
 	    _this.selectAlbum = _this.selectAlbum.bind(_this);
 	    _this.deselectAlbum = _this.deselectAlbum.bind(_this);
+	    _this.selectArtist = _this.selectArtist.bind(_this);
 	    return _this;
 	  }
 	
@@ -26957,27 +26963,21 @@
 	    value: function componentDidMount() {
 	      var _this2 = this;
 	
-	      console.log('componentDidMount hello');
-	
 	      var albumsPromise = _axios2.default.get('/api/albums/').then(function (res) {
 	        return res.data;
-	      });
+	      }).catch(console.error('error'));
 	      // .then(albums => this.onLoad(convertAlbums(albums)));
 	
 	      var artistsPromise = _axios2.default.get('/api/artists/').then(function (res) {
-	        console.log('res.data', res.data);
 	        return res.data;
-	      });
+	      }).catch(console.error('error'));
 	      // .then(artistsFromServer => this.onLoad(null, artistsFromServer))
 	
 	      Promise.all([albumsPromise, artistsPromise]).then(function (resultArray) {
-	
 	        var returnedAlbums = resultArray[0];
 	        var returnedArtists = resultArray[1];
-	        console.log('returnedAlbums', returnedAlbums);
-	        console.log('returnedArtists', returnedArtists);
-	        _this2.onLoad((0, _utils.convertAlbums)(returnedAlbums), returnedArtists);
-	      });
+	        _this2.onLoad({ albums: (0, _utils.convertAlbums)(returnedAlbums), artists: returnedArtists });
+	      }).catch(console.error('error'));
 	
 	      _audio2.default.addEventListener('ended', function () {
 	        return _this2.next();
@@ -26988,12 +26988,15 @@
 	    }
 	  }, {
 	    key: 'onLoad',
-	    value: function onLoad(albums, artists) {
-	      this.setState({
-	        albums: albums,
-	        artists: artists
-	      });
+	    value: function onLoad(newStateObj) {
+	      this.setState(newStateObj);
 	    }
+	    // onLoad (albums, artists) {
+	    //   this.setState({
+	    //     albums: albums,
+	    //     artists: artists
+	    //   });
+	    // }
 	    // PREVIOUS
 	    // onLoad (albums) {
 	    //   this.setState({
@@ -27070,6 +27073,31 @@
 	      });
 	    }
 	  }, {
+	    key: 'selectArtist',
+	    value: function selectArtist(artistId) {
+	      var _this4 = this;
+	
+	      var gettingArtist = _axios2.default.get('/api/artists/' + artistId).then(function (res) {
+	        return res.data;
+	      }).catch(console.error('error'));
+	
+	      var gettingArtistAlbums = _axios2.default.get('/api/artists/' + artistId + '/albums').then(function (res) {
+	        return res.data;
+	      }).catch(console.error('error'));
+	
+	      var gettingArtistSongs = _axios2.default.get('/api/artists/' + artistId + '/songs').then(function (res) {
+	        return res.data;
+	      }).catch(console.error('error'));
+	
+	      Promise.all([gettingArtist, gettingArtistAlbums, gettingArtistSongs]).then(function (resultArray) {
+	        var returnedArtist = resultArray[0];
+	        var returnedAlbums = resultArray[1];
+	        var returnedSongs = resultArray[2];
+	        console.log('artist:', returnedArtist, ', albums:', returnedAlbums, ', songs:', returnedSongs);
+	        _this4.onLoad({ selectedArtist: returnedArtist, albums: returnedAlbums, songs: returnedSongs });
+	      }).catch(console.error('error'));
+	    }
+	  }, {
 	    key: 'deselectAlbum',
 	    value: function deselectAlbum() {
 	      this.setState({ selectedAlbum: {} });
@@ -27091,9 +27119,11 @@
 	          this.props.children ? _react2.default.cloneElement(this.props.children, {
 	            album: this.state.selectedAlbum,
 	            albums: this.state.albums,
+	            songs: this.state.songs,
 	            selectAlbum: this.selectAlbum,
-	            artists: this.state.arists,
+	            artists: this.state.artists,
 	            selectedArtist: this.state.selectedArtist,
+	            selectArtist: this.selectArtist,
 	            currentSong: this.state.currentSong,
 	            isPlaying: this.state.isPlaying,
 	            toggle: this.toggleOne
@@ -28756,7 +28786,6 @@
 	  }, {
 	    key: 'render',
 	    value: function render() {
-	      console.log(this.props);
 	      var album = this.props.album;
 	      var currentSong = this.props.currentSong;
 	      var isPlaying = this.props.isPlaying;
@@ -29058,7 +29087,7 @@
 	              { className: 'list-group-item', key: artist.id },
 	              _react2.default.createElement(
 	                _reactRouter.Link,
-	                { to: '' },
+	                { to: 'artists/' + artist.id },
 	                artist.name
 	              )
 	            );
@@ -29114,6 +29143,74 @@
 	  var next = currentSongList[idx];
 	  return [next, currentSongList];
 	};
+
+/***/ }),
+/* 272 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _react = __webpack_require__(1);
+	
+	var _react2 = _interopRequireDefault(_react);
+	
+	var _reactRouter = __webpack_require__(182);
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+	
+	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+	
+	var Artist = function (_React$Component) {
+	  _inherits(Artist, _React$Component);
+	
+	  function Artist() {
+	    _classCallCheck(this, Artist);
+	
+	    return _possibleConstructorReturn(this, (Artist.__proto__ || Object.getPrototypeOf(Artist)).apply(this, arguments));
+	  }
+	
+	  _createClass(Artist, [{
+	    key: 'componentDidMount',
+	    value: function componentDidMount() {
+	      console.log('hitting single artist');
+	      var artistId = this.props.params.artistId;
+	      this.props.selectArtist(artistId);
+	    }
+	  }, {
+	    key: 'render',
+	    value: function render() {
+	      var artist = this.props.selectedArtist;
+	      var albums = this.props.albums;
+	      var songs = this.props.songs;
+	      console.log('ARTIST:', artist, albums, songs);
+	      return _react2.default.createElement(
+	        'div',
+	        null,
+	        _react2.default.createElement(
+	          'h3',
+	          null,
+	          artist.name
+	        ),
+	        _react2.default.createElement('h4', null),
+	        _react2.default.createElement('h4', null)
+	      );
+	    }
+	  }]);
+	
+	  return Artist;
+	}(_react2.default.Component);
+	
+	exports.default = Artist;
 
 /***/ })
 /******/ ]);
