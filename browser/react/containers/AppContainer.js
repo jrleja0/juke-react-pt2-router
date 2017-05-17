@@ -4,10 +4,12 @@ import axios from 'axios';
 import initialState from '../initialState';
 import AUDIO from '../audio';
 
-import Albums from '../components/Albums.js';
+import Albums from '../components/Albums';
 import Album from '../components/Album';
 import Sidebar from '../components/Sidebar';
 import Player from '../components/Player';
+import Artists from '../components/Artists';
+
 
 import { convertAlbum, convertAlbums, skip } from '../utils';
 
@@ -26,21 +28,49 @@ export default class AppContainer extends Component {
   }
 
   componentDidMount () {
-    axios.get('/api/albums/')
+    console.log('componentDidMount hello')
+
+    let albumsPromise = axios.get('/api/albums/')
       .then(res => res.data)
-      .then(album => this.onLoad(convertAlbums(album)));
+      // .then(albums => this.onLoad(convertAlbums(albums)));
+
+    let artistsPromise = axios.get('/api/artists/')
+      .then(res => {
+        console.log('res.data',res.data)
+        return res.data
+    })
+      // .then(artistsFromServer => this.onLoad(null, artistsFromServer))
+
+    Promise.all([albumsPromise, artistsPromise])
+    .then(resultArray => {
+
+      let returnedAlbums = resultArray[0];
+      let returnedArtists = resultArray[1];
+      console.log('returnedAlbums', returnedAlbums);
+      console.log('returnedArtists', returnedArtists);
+      this.onLoad(convertAlbums(returnedAlbums), returnedArtists)
+    })
 
     AUDIO.addEventListener('ended', () =>
       this.next());
     AUDIO.addEventListener('timeupdate', () =>
       this.setProgress(AUDIO.currentTime / AUDIO.duration));
+
   }
 
-  onLoad (albums) {
+  onLoad (albums, artists) {
     this.setState({
-      albums: albums
+      albums: albums,
+      artists: artists
     });
   }
+// PREVIOUS
+  // onLoad (albums) {
+  //   this.setState({
+  //     albums: albums
+  //   });
+  // }
+
 
   play () {
     AUDIO.play();
@@ -113,11 +143,13 @@ export default class AppContainer extends Component {
           this.props.children ?
             React.cloneElement(this.props.children, {
               album: this.state.selectedAlbum,
+              albums: this.state.albums,
+              selectAlbum: this.selectAlbum,
+              artists: this.state.arists,
+              selectedArtist: this.state.selectedArtist,
               currentSong: this.state.currentSong,
               isPlaying: this.state.isPlaying,
-              toggle: this.toggleOne,
-              albums: this.state.albums,
-              selectAlbum: this.selectAlbum
+              toggle: this.toggleOne
             })
             : null
         }
